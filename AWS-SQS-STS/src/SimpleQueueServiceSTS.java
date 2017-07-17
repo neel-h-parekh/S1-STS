@@ -3,7 +3,6 @@ import java.util.Map.Entry;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.Message;
@@ -12,31 +11,31 @@ import com.amazonaws.services.sqs.model.ReceiveMessageResult;
 
 public class SimpleQueueServiceSTS
 {
-    public static void main(String[] args) throws Exception 
-    {
-    	int maxNomsg = 0;
-    	String sqs_url = null;//"https://sqs.us-east-1.amazonaws.com/882038671278/s1-pipeline-sqs"
-    	if (args.length > 0)
-    	{
-    		try
-    		{
-    			maxNomsg = Integer.parseInt(args[0]);
-    			sqs_url = args[1];
-    		}
-    		catch(Exception e)
-    		{
-    		}
-    	}
-    	AmazonSQS sqs = AmazonSQSClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
-    	
-    	while (true)
-    	{
-    		
+	static String awsRegion;
+	static int maxmaxNoofMsg;
+	static String sqsURL;
+	
+	AmazonSQS sqs;
+
+	public static void setParam(String args[])
+	{
+		awsRegion = args[0];
+		maxmaxNoofMsg = Integer.parseInt(args[1]);
+		sqsURL = args[2];
+	}
+	
+	public void setSQS()
+	{
+		sqs = AmazonSQSClientBuilder.standard().withRegion(awsRegion).build();
+	}
+	
+	public void getSQSMessages()
+	{
         try 
         {
             System.out.println("Receiving messages from S1 SQS.\n");
-            ReceiveMessageRequest rmsgr = new ReceiveMessageRequest(sqs_url);
-            rmsgr.setMaxNumberOfMessages(maxNomsg);
+            ReceiveMessageRequest rmsgr = new ReceiveMessageRequest(sqsURL);
+            rmsgr.setMaxNumberOfMessages(maxmaxNoofMsg);
             ReceiveMessageResult rmr = sqs.receiveMessage(rmsgr);
             List<Message> messages = rmr.getMessages();
             for (Message message : messages) 
@@ -65,11 +64,37 @@ public class SimpleQueueServiceSTS
         } 
         catch (AmazonClientException ace) 
         {
-            System.out.println("Caught an AmazonClientException, which means the client encountered " +
-                    "a serious internal problem while trying to communicate with SQS, such as not " +
-                    "being able to access the network.");
+            System.out.println("Caught an AmazonClientException, which means the client encountered a serious internal problem while trying to communicate with SQS, such as not being able to access the network.");
             System.out.println("Error Message: " + ace.getMessage());
         }
+        catch (Exception e)
+        {
+        	System.out.println("Exception while executing getMessages()");
+        	e.printStackTrace();
+        }
+        
+    }
+	
+    public static void main(String[] args) throws Exception
+    {
+    	if (args.length > 0)
+    	{
+    		try
+    		{
+    			setParam(args);
+    		}
+    		catch(Exception e)
+    		{
+    			System.out.println("Exception in getting arguments");
+    			e.printStackTrace();
+    		}
+    	}
+    	
+    	SimpleQueueServiceSTS sqs1 = new SimpleQueueServiceSTS();
+    	sqs1.setSQS();
+    	while (true)
+    	{
+    		sqs1.getSQSMessages();
     	}
     }
 }
