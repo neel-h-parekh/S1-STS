@@ -1,0 +1,32 @@
+{
+"runThreads":"4",
+"retryMax":"5",
+"retryWaitSeconds":"5",
+"aws-sqs-redshift-loader":
+	[
+	  {
+			"aws":
+				[
+					{
+						"awsRegion":"US_EAST_1"
+					}
+				],
+			"awsSQS":
+				[	
+					{
+						"maxNoofMsg":"5",
+						"sqsURL":"https://sqs.us-east-1.amazonaws.com/882038671278/s1-pipeline-sqs"
+					}
+				],
+			"awsREDSHIFT":
+				[
+					{
+						"redshiftdbURL":"jdbc:redshift://qa-test-instance.cqbb4lssh7bz.us-east-1.redshift.amazonaws.com:5439/testqa",
+						"masterUsername":"master",
+						"masterUserPassword":"QAmaster1",
+						"tableName":"s1staging.s1pipeline_s3"
+					}
+				]
+	  }
+	]
+}
