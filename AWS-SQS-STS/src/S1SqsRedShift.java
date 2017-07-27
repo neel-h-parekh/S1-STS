@@ -22,7 +22,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.*;
 
-public class SimpleQueueServiceSTS implements Runnable
+public class S1SqsRedShift implements Runnable
 {
 	public static Logger logger = LogManager.getLogger("SimpleQueueServiceSTS");
 
@@ -44,7 +44,7 @@ public class SimpleQueueServiceSTS implements Runnable
 	private Thread t;
 	private String threadName;
 	
-	SimpleQueueServiceSTS(String name) 
+	S1SqsRedShift(String name) 
 	{
 		threadName = name;
 		logger.info("Creating " +  threadName );
@@ -311,7 +311,7 @@ public class SimpleQueueServiceSTS implements Runnable
         	
         	for(int i=1;i<=Integer.parseInt(noOfThreads);i++)
         	{
-        		 new SimpleQueueServiceSTS("thread"+i).start();
+        		 new S1SqsRedShift("thread"+i).start();
         	}
     	}
     	catch(Exception e)
