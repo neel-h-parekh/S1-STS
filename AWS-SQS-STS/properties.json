@@ -1,5 +1,5 @@
 {
-"runThreads":"4",
+"runThreads":"1",
 "retryMax":"5",
 "retryWaitSeconds":"5",
 "aws-sqs-redshift-loader":

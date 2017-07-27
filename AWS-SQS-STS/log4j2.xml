@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="info">
+    <Appenders>
+		<Console name="Console-Appender" target="SYSTEM_OUT">            
+			<PatternLayout>
+				<pattern>              
+					[%level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n                
+				</pattern>>            
+			</PatternLayout>        
+		</Console>
+        <RollingRandomAccessFile name="File-Appender" fileName="logs/S1SqsDbUtil.log" filePattern="logs/archive/S1SqsDbUtil.log.%d{yyyy-MM-dd-hh-mm}.gz">
+            <PatternLayout>
+                <pattern>
+                    [%level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n
+                </pattern>
+            </PatternLayout>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="1 KB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+        </RollingRandomAccessFile >
+    </Appenders>
+    <Loggers>
+        <AsyncLogger name="SimpleQueueServiceSTS" level="info">
+            <AppenderRef ref="File-Appender"/>
+            <AppenderRef ref="Console-Appender"/>
+        </AsyncLogger>
+		<AsyncRoot level="debug">
+            <!--<AppenderRef ref="Console-Appender"/>-->
+        </AsyncRoot>
+    </Loggers>
+</Configuration>

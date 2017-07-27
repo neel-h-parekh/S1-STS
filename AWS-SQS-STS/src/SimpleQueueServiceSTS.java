@@ -17,10 +17,14 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.sql.*;
 import java.util.Properties;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.*;
 
 public class SimpleQueueServiceSTS implements Runnable
 {
+	public static Logger logger = LogManager.getLogger("SimpleQueueServiceSTS");
 
     static String noOfThreads;
     static int retryCount;
@@ -43,7 +47,7 @@ public class SimpleQueueServiceSTS implements Runnable
 	SimpleQueueServiceSTS(String name) 
 	{
 		threadName = name;
-		System.out.println("Creating " +  threadName );
+		logger.info("Creating " +  threadName );
 	}
 	
 	AmazonSQS sqsClient;
@@ -75,7 +79,7 @@ public class SimpleQueueServiceSTS implements Runnable
 	        {
 	            is = new FileInputStream("properties.json");
 	            jsonTxt = IOUtils.toString(is);
-	            System.out.println(jsonTxt);
+	            logger.info(jsonTxt);
 	            properties = new JSONObject(jsonTxt);
 				awsRegion = properties.getJSONArray("aws-sqs-redshift-loader").getJSONObject(0).getJSONArray("aws").getJSONObject(0).getString("awsRegion");
 				maxNoofMsg = Integer.parseInt(properties.getJSONArray("aws-sqs-redshift-loader").getJSONObject(0).getJSONArray("awsSQS").getJSONObject(0).getString("maxNoofMsg"));
@@ -87,23 +91,28 @@ public class SimpleQueueServiceSTS implements Runnable
 				noOfThreads = properties.getString("runThreads");
 				retryCount = Integer.parseInt(properties.getString("retryMax"));
 				retryWaitMilliSeconds = Integer.parseInt(properties.getString("retryWaitSeconds"))*1000;
-				System.out.println("*************************Config*************************");
-				System.out.println("No of Threads to run : "+noOfThreads);
-				System.out.println("AWS Region : "+awsRegion);
-				System.out.println("Pool queue upto messages : "+maxNoofMsg);
-				System.out.println("AWS SQS Url : "+sqsURL);
-				System.out.println("AWS RedShift DB JDBC Url : "+dbURL);
-				System.out.println("AWS RedShift DB Username : "+masterUsername);
-				System.out.println("AWS RedShift DB Schema.Tablename : "+tableName);
-				System.out.println("Max Retry : "+retryCount);
-				System.out.println("Retry wait secnds : "+retryWaitMilliSeconds/1000);
+				logger.info("*************************Config*************************");
+				logger.info("No of Threads to run : "+noOfThreads);
+				logger.info("AWS Region : "+awsRegion);
+				logger.info("Pool queue upto messages : "+maxNoofMsg);
+				logger.info("AWS SQS Url : "+sqsURL);
+				logger.info("AWS RedShift DB JDBC Url : "+dbURL);
+				logger.info("AWS RedShift DB Username : "+masterUsername);
+				logger.info("AWS RedShift DB Schema.Tablename : "+tableName);
+				logger.info("Max Retry : "+retryCount);
+				logger.info("Retry wait secnds : "+retryWaitMilliSeconds/1000);
+	        }
+	        else
+	        {
+	        	logger.error("properities file not found");
+	        	logger.error("Exiting Application");
 	        }
 		}
 		catch(Exception e)
 		{
-			System.out.println("Caught an Exception while getting properties.json");
-			System.out.println("Exiting...");
-			e.printStackTrace();
+			logger.error("Caught an Exception while getting properties.json");
+			logger.error(e.getMessage(),e);
+			logger.error("Exiting Application...");
 			System.exit(0);
 		}
 	}
@@ -126,9 +135,10 @@ public class SimpleQueueServiceSTS implements Runnable
 			}
 			catch(Exception e)
 			{
-				System.out.println(threadName+" : Caught an Exception while getting AWS RedShift DB Connection"+e);
+				logger.error("Caught an Exception while getting AWS RedShift DB Connection");
+				logger.error(e.getMessage(),e);
 		        if (count++ == retryCount) throw e;
-		        System.out.println(threadName+" : Retry "+count+": Getting AWS RedShift DB Connection after "+(retryWaitMilliSeconds/1000)+" seconds.");
+		        logger.warn("Retry "+count+": Getting AWS RedShift DB Connection after "+(retryWaitMilliSeconds/1000)+" seconds.");
 		        Thread.sleep(maxTriesWaitMilliSec);
 			}
 		}
@@ -148,15 +158,16 @@ public class SimpleQueueServiceSTS implements Runnable
 			}
 			catch(Exception e)
 			{
-		        System.out.println(threadName+" : Caught an Exception while getting SQS Client."+e);
+				logger.error("Caught an Exception while getting SQS Client.");
+				logger.error(e.getMessage(),e);
 		        if (count++ == retryCount) throw e;
-		        System.out.println(threadName+" : Retry "+count+": Getting SQS Client after "+(retryWaitMilliSeconds/1000)+" seconds.");
+		        logger.warn("Retry "+count+": Getting SQS Client after "+(retryWaitMilliSeconds/1000)+" seconds.");
 		        Thread.sleep(maxTriesWaitMilliSec);
 			}
 		}
 	}
 	
-	public void getSQSMessages() throws InterruptedException
+	public void getSQSMessages() throws Exception
 	{
 		int count = 0;
 		int maxTriesWaitMilliSec = retryWaitMilliSeconds;
@@ -172,16 +183,17 @@ public class SimpleQueueServiceSTS implements Runnable
 	            {
 	                for(Message msg:messages)
 	                {
-	                	System.out.println(threadName+" : Received SQS MessageId : "+msg.getMessageId());
+	                	logger.info("Received SQS MessageId : "+msg.getMessageId());
 	                }
 	            }
 	            break;
 	        }
 	        catch (Exception e)
 	        {
-	        	System.out.println(threadName+" : Caught an Exception while getting SQS Messages"+e);
+	        	logger.error("Caught an Exception while getting SQS Messages");
+				logger.error(e.getMessage(),e);
 		        if (count++ == retryCount) throw e;
-		        System.out.println(threadName+" : Retry "+count+": Getting SQS Messages after "+(retryWaitMilliSeconds/1000)+" seconds.");
+		        logger.warn("Retry "+count+": Getting SQS Messages after "+(retryWaitMilliSeconds/1000)+" seconds.");
 		        Thread.sleep(maxTriesWaitMilliSec);
 	        }
 		}
@@ -210,7 +222,7 @@ public class SimpleQueueServiceSTS implements Runnable
 					sql = "insert into "+tableName+" (tbl_name,file_ym,file_day,file_hr,file_min,file_name,file_bucket,file_create_date) "
 							+ "values ("
 							+ "'"+tbl_name+"','"+file_ym+"',"+file_day+","+file_hr+","+file_min+",'"+file_name+"','"+file_bucket+"','"+file_create_date+"')";
-					System.out.println(threadName+" : Prepared SQL:\t\t"+sql);
+					logger.info("Prepared SQL:\t\t"+sql);
 					stmt.addBatch(sql);
 				}
 				stmt.executeBatch();
@@ -218,8 +230,8 @@ public class SimpleQueueServiceSTS implements Runnable
 		}
 		catch(Exception e)
 		{
-			System.out.println(threadName+" : Caught an Exception while inserting records into db"+e);
-			e.printStackTrace();
+			logger.error("Caught an Exception while inserting records into db");
+			logger.error(e.getMessage(),e);
 		}
 	}
 	
@@ -241,26 +253,26 @@ public class SimpleQueueServiceSTS implements Runnable
 				
 				for (DeleteMessageBatchResultEntry deleteMessageBatchResultEntry : deleteMessageBatchResult.getSuccessful())
 				{
-					System.out.println(threadName+" : Deleted SQS MessageID : "+deleteMessageBatchResultEntry.getId());
+					logger.info("Deleted SQS MessageID : "+deleteMessageBatchResultEntry.getId());
 			    }
 				
 				for (BatchResultErrorEntry errorDeleteMessageBatchEntry : deleteMessageBatchResult.getFailed())
 				{
-		            System.out.println(threadName+" : Failed to delete SQS MessageId : "+errorDeleteMessageBatchEntry.getId());
-		            System.out.println(errorDeleteMessageBatchEntry.getMessage());
+		            logger.error("Failed to delete SQS MessageId : "+errorDeleteMessageBatchEntry.getId());
+		            logger.error(errorDeleteMessageBatchEntry.getMessage());
 				}
 			}
 		}
 		catch(Exception e)
 		{
-			System.out.println(threadName+" : Exception while deleteing SQS messages"+e);
-			e.printStackTrace();
+			logger.error("Exception while deleteing SQS messages");
+			logger.error(e.getMessage(),e);
 		}	
 	}
 	
 	public void start() 
 	{
-		System.out.println("Starting " +  threadName );
+		logger.info("Starting " +  threadName );
 		if (t == null)
 		{
 			t = new Thread (this, threadName);
@@ -283,18 +295,28 @@ public class SimpleQueueServiceSTS implements Runnable
 		}
 		catch(Exception e)
 		{
-			System.out.println(threadName+" : Ending due to Exception"+e);
-			e.printStackTrace();
+			logger.error("Ending due to Exception"+e);
+			logger.error(e.getStackTrace());
 		}
 	}
 	
     public static void main(String[] args) throws Exception
     {
-    	getSetProperties();
+    	logger.info("Starting Application...");
     	
-    	for(int i=1;i<=Integer.parseInt(noOfThreads);i++)
+    	try
     	{
-    		 new SimpleQueueServiceSTS("thread"+i).start();
+    		logger.info("Getting configuration properties");
+        	getSetProperties();
+        	
+        	for(int i=1;i<=Integer.parseInt(noOfThreads);i++)
+        	{
+        		 new SimpleQueueServiceSTS("thread"+i).start();
+        	}
+    	}
+    	catch(Exception e)
+    	{
+    		logger.error(e.getMessage(),e);
     	}
     }
 }
